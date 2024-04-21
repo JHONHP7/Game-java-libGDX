@@ -8,11 +8,21 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.TimeUtils;
+import java.util.Iterator;
+
 public class SpaceShip extends ApplicationAdapter {
 	SpriteBatch batch;
-	Texture img, tNave;
+	Texture img, tNave, tMissile, tEnemy;
 	private Sprite nave;
-	private Float posX, posY, velocity;
+	private Sprite missile;
+	private Float posX, posY, velocity, xMissile, yMissile;
+	private boolean shoot = false;
+	private Array<Rectangle> enemies;
+	private Long lastEnemyTime;
 
 	/**
 	 * Construtor para libGDX
@@ -26,6 +36,16 @@ public class SpaceShip extends ApplicationAdapter {
 		posX = 0f;
 		posY = 0f;
 		velocity = 10f;
+
+		tMissile = new Texture("missile.png");
+		missile = new Sprite(tMissile);
+		xMissile = posX;
+		yMissile = posY;
+		shoot = false;
+
+		tEnemy = new Texture("enemy.png");
+		enemies = new Array<Rectangle>();
+		lastEnemyTime = 0L;
 	}
 
 	/**
@@ -35,11 +55,19 @@ public class SpaceShip extends ApplicationAdapter {
 	public void render() {
 
 		this.moveNave();
+		this.moveMissile();
+		this.moveEnimies();
 
 		ScreenUtils.clear(1, 0, 0, 1);
 		batch.begin();
 		batch.draw(img, 0, 0);
+		if (shoot) {
+			batch.draw(missile, xMissile + nave.getWidth() / 2, yMissile + nave.getHeight() / 2 - 12);
+		}
 		batch.draw(nave, posX, posY);
+		for (Rectangle enemy : enemies) {
+			batch.draw(tEnemy, enemy.x, enemy.y);
+		}
 		batch.end();
 	}
 
@@ -74,5 +102,50 @@ public class SpaceShip extends ApplicationAdapter {
 				posY -= velocity;
 			}
 		}
+	}
+
+	private void moveMissile() {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && !shoot) {
+			shoot = true;
+			yMissile = posY;
+
+		}
+		if (shoot) {
+			if (xMissile < Gdx.graphics.getWidth()) {
+				xMissile += 40;
+			} else {
+				xMissile += 40;
+				shoot = false;
+			}
+		} else {
+			yMissile = posY;
+			xMissile = posX;
+		}
+
+	}
+
+	private void spawnEnemies() {
+		Rectangle enemy = new Rectangle(Gdx.graphics.getWidth(),
+				MathUtils.random(0, Gdx.graphics.getHeight() - tEnemy.getHeight()),
+				tEnemy.getWidth(), tEnemy.getHeight());
+
+		enemies.add(enemy);
+		lastEnemyTime = TimeUtils.nanoTime();
+
+	}
+
+	private void moveEnimies() {
+		if (TimeUtils.nanoTime() - lastEnemyTime > 999999999) {
+			this.spawnEnemies();
+		}
+
+		for (Iterator<Rectangle> iter = enemies.iterator(); iter.hasNext();) {
+			Rectangle enemy = iter.next();
+			enemy.x -= 400 * Gdx.graphics.getDeltaTime();
+			if (enemy.x + tEnemy.getWidth() < 0) {
+				iter.remove();
+			}
+		}
+
 	}
 }
